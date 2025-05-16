@@ -1,0 +1,13 @@
+@import url("../styles/reset.css");
+
+:host {
+  display: inline-block;
+}
+
+.container {
+  border-radius: 8px;
+  padding: 8px;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center
+}

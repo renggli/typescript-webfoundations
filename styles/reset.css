@@ -1,0 +1,42 @@
+/* https://www.digitalocean.com/community/tutorials/css-minimal-css-reset */
+
+:root {
+  box-sizing: border-box;
+  font-size: 16px;
+  line-height: 1.4;
+  /* https://kilianvalkhof.com/2022/css-html/your-css-reset-needs-text-size-adjust-probably/ */
+  -webkit-text-size-adjust: none;
+  -moz-text-size-adjust: none;
+  text-size-adjust: none;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  margin: 0;
+  padding: 0;
+  font-weight: normal;
+}
+
+input,
+textarea,
+button {
+  font-size: inherit;
+  font-family: inherit;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}

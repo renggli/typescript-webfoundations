@@ -1,0 +1,17 @@
+@import url("../styles/reset.css");
+
+:host {
+  display: block;
+}
+
+.container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-y: auto;
+}
+
+.container::-webkit-scrollbar {
+  display: none;
+}

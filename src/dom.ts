@@ -6,6 +6,9 @@ declare global {
   interface EventTarget {
     [REGISTERED_LISTENERS]?: Listeners;
   }
+  interface Node {
+    moveBefore<T extends Node>(node: T, child: Node | null): T;
+  }
 }
 
 // Types used for the [createElement] function.
@@ -287,7 +290,11 @@ function updateChildren(parent: Element, children: Children = []) {
     const nextSibling = newNodes[i + 1] ?? null;
     if (node.parentNode === parent) {
       if (node.nextSibling !== nextSibling) {
-        parent.insertBefore(node, nextSibling);
+        if (parent.moveBefore) {
+          parent.moveBefore(node, nextSibling);
+        } else {
+          parent.insertBefore(node, nextSibling);
+        }
       }
     } else {
       parent.insertBefore(node, nextSibling);

@@ -1,18 +1,8 @@
 class CarouselComponent extends HTMLElement {
-  #container;
-
   constructor() {
     super();
-    if (!this.shadowRoot) {
-      this.attachShadow({ mode: 'open' });
-      this.shadowRoot.appendChild(template.content.cloneNode(true));
-    }
-    this.#container = this.shadowRoot.querySelector('.container');
-  }
-
-  attributeChangedCallback(name, oldValue, newValue) {
-    switch (name) {
-    }
+    const shadowRoot = this.attachShadow({ mode: 'open' });
+    shadowRoot.appendChild(template.content.cloneNode(true));
   }
 }
 

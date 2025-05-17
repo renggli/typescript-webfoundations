@@ -1,0 +1,19 @@
+{
+  "name": "web-foundations",
+  "version": "1.0.0",
+  "description": "Helpers for quickly prototyping web applications.",
+  "author": "Lukas Renggli",
+  "license": "MIT License",
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "scripts": {
+    "clean": "find ./src ./demo -name \"*.js\" -delete -o -name \"*.js.map\" -delete",
+    "build": "tsc",
+    "watch": "tsc --watch --sourceMap",
+    "serve": "http-server --gzip -c-1",
+    "dev": "concurrently --kill-others 'npm run watch' 'npm run serve'"
+  }
+}

@@ -1,22 +1,8 @@
 class SlideshowComponent extends HTMLElement {
   constructor() {
     super();
-    if (!this.shadowRoot) {
-      this.attachShadow({ mode: 'open' });
-      this.shadowRoot.appendChild(template.content.cloneNode(true));
-    }
-    this.update();
-  }
-
-  static get observedAttributes() {
-    return [];
-  }
-
-  attributeChangedCallback() {
-    this.update();
-  }
-
-  update() {
+    const shadowRoot = this.attachShadow({ mode: 'open' });
+    shadowRoot.appendChild(template.content.cloneNode(true));
   }
 }
 
@@ -27,7 +13,8 @@ template.innerHTML = `
   <div class="items>
     <slot></slot>
   </div>
-  <div class="scroll"></div>
+  <div class="scroll">
+  </div>
 </div>
 `
 

@@ -210,27 +210,29 @@ function updateListeners(element: Element, listeners: Listeners = {}) {
 
 /** Internal helper to in-place update the children. */
 function updateChildren(parent: Element, children: Children = []) {
-  // Collect the old children.
-  const keyedElements: Record<string, Element> = {};
+  const oldNodes = [...parent.childNodes];
+
+  // Index the old children.
+  const keyedElements = new Map<string, Element>()
   const otherElements: Element[] = [];
-  const textNodes: Record<string, Text> = {};
-  for (var i = 0; i < parent.childNodes.length; i++) {
-    const node = parent.childNodes[i];
+  const textNodes = new Map<string, Text>();
+  for (const node of oldNodes) {
     if (node.nodeType === Node.ELEMENT_NODE) {
       const element = node as Element;
       const key = element.getAttribute(KEY_ATTRIBUTE);
       if (key) {
-        keyedElements[key] = element;
+        keyedElements.set(key, element);
       } else {
         otherElements.push(element);
       }
     } else if (node.nodeType === Node.TEXT_NODE) {
       const text = node as Text;
       if (text.textContent) {
-        textNodes[text.textContent] = text;
+        textNodes.set(text.textContent, text);
       }
     }
   }
+
   // Build the list of new children.
   const newNodes: Node[] = [];
   for (const child of children) {
@@ -240,10 +242,10 @@ function updateChildren(parent: Element, children: Children = []) {
       // Handle keyed elements.
       const key = child.attributes?.[KEY_ATTRIBUTE];
       if (key) {
-        const element = keyedElements[key];
+        const element = keyedElements.get(key);
         if (element && element.tagName.toLowerCase() === child.tagName.toLowerCase()) {
           updateElement(element, child);
-          delete keyedElements[key];
+          keyedElements.delete(key);
           newNodes.push(element);
           continue;
         }
@@ -263,16 +265,32 @@ function updateChildren(parent: Element, children: Children = []) {
     } else {
       // Try reusing the text elements.
       const text = child.toString();
-      const textNode = textNodes[text];
+      const textNode = textNodes.get(text);
       if (textNode) {
         newNodes.push(textNode);
-        delete textNodes[text];
+        textNodes.delete(text);
         continue;
       }
       // No match found, create node.
       newNodes.push(document.createTextNode(text));
     }
   }
-  // Let the browser handle the replacement.
-  parent.replaceChildren(...newNodes);
+
+  // Remove elements no longer present.
+  for (const element of [...keyedElements.values(), ...otherElements, ...textNodes.values()]) {
+    parent.removeChild(element);
+  }
+
+  // Append and move into the right order.
+  for (let i = newNodes.length - 1; i >= 0; i--) {
+    const node = newNodes[i];
+    const nextSibling = newNodes[i + 1] ?? null;
+    if (node.parentNode === parent) {
+      if (node.nextSibling !== nextSibling) {
+        parent.insertBefore(node, nextSibling);
+      }
+    } else {
+      parent.insertBefore(node, nextSibling);
+    }
+  }
 }

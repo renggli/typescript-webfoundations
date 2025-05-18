@@ -1,6 +1,7 @@
 const KEY_ATTRIBUTE = "key";
-
 const REGISTERED_LISTENERS = Symbol("__registered_listeners");
+
+// DOM Extensions.
 declare global {
   interface EventTarget {
     [REGISTERED_LISTENERS]?: Listeners;
@@ -10,86 +11,81 @@ declare global {
   }
 }
 
-// Types used for the [createElement] function.
-type CreateElementProps = Record<
-  string,
-  string | EventListenerOrEventListenerObject
->;
-type CreateElementChild = string | Node;
-
-/**
- * Creates a new HTML element with the specified tag name, properties, and child nodes.
- */
-export function createElement<E extends keyof HTMLElementTagNameMap>(
-  tagName: E,
-  propsOrChild?: CreateElementProps | CreateElementChild,
-  ...childArgs: CreateElementChild[]
-): HTMLElementTagNameMap[E];
-export function createElement<E extends keyof SVGElementTagNameMap>(
-  tagName: E,
-  propsOrChild?: CreateElementProps | CreateElementChild,
-  ...childArgs: CreateElementChild[]
-): SVGElementTagNameMap[E];
-export function createElement<E extends Element = Element>(
-  tagName: string,
-  propsOrChild?: CreateElementProps | CreateElementChild,
-  ...childArgs: CreateElementChild[]
-): E {
-  // Prepare the function arguments.
-  let props: CreateElementProps;
-  const attributes: Attributes = {};
-  const listeners: Listeners = {};
-  const children: Array<string | Node> = [];
-  if (typeof propsOrChild === "string" || propsOrChild instanceof Node) {
-    children.push(propsOrChild);
-    props = {};
-  } else {
-    props = propsOrChild ?? {};
-  }
-  children.push(...childArgs);
-  // Create the attributes and listeners.
-  for (const name of Object.getOwnPropertyNames(props)) {
-    const value = props[name];
-    if (name.startsWith("on") && typeof value === "function") {
-      listeners[name.slice(2).toLowerCase()] = value;
-    } else if (typeof value === "string") {
-      attributes[name] = value;
-    }
-  }
-  // Create the element.
-  return buildElement({
-    tagName,
-    attributes,
-    listeners,
-    children,
-  } as VirtualDOM<any>);
-}
-
 // Types used for the virtual DOM specification.
 type Attributes = Record<string, string>;
 type Listeners = Record<string, EventListenerOrEventListenerObject>;
-type Children = Array<string | Node | VirtualDOM<any>>;
+type Children = Array<string | VirtualDOM<any>>;
 
-// Virtual DOM specification.
+/** Specification of a DOM node. */
 export interface VirtualDOM<E> {
+  /** The tag name of the element. */
   tagName: E;
+  /** The namespace URL of the element. */
   namespaceURI?: string;
+  /** Attributes of the element. */
   attributes?: Attributes;
+  /** Listeners attached to the element. */
   listeners?: Listeners;
+  /** Children of the element. */
   children?: Children;
 }
 
+// Types used for the [createVirtual] function.
+type VirtualProps = Record<string, string | EventListenerOrEventListenerObject>;
+type VirtualChild = string | VirtualDOM<any>;
+
 /**
- * Recursively constructs a DOM element based on a `VirtualDOM` specification.
+ * Helper to creates a `VirtualDOM` node given the arguments.
+ */
+export function createVirtual<E extends keyof HTMLElementTagNameMap>(
+  tagName: E,
+  props?: VirtualProps,
+  ...children: VirtualChild[]
+): VirtualDOM<E>;
+export function createVirtual<E extends keyof SVGElementTagNameMap>(
+  tagName: E,
+  props?: VirtualProps,
+  ...children: VirtualChild[]
+): VirtualDOM<E>;
+export function createVirtual(
+  tagName: string,
+  props?: VirtualProps,
+  ...children: VirtualChild[]
+): VirtualDOM<string> {
+  // Prepare the function arguments.
+  let attributes: Attributes | undefined;
+  let listeners: Listeners | undefined;
+  // Create the attributes and listeners.
+  if (props) {
+    for (const name of Object.getOwnPropertyNames(props)) {
+      const value = props[name];
+      if (name.startsWith("on") && typeof value === "function") {
+        (listeners ??= {})[name.slice(2).toLowerCase()] = value;
+      } else if (typeof value === "string") {
+        (attributes ??= {})[name] = value;
+      }
+    }
+  }
+  // Create the virtual element.
+  return {
+    tagName,
+    attributes,
+    listeners,
+    children: children.length > 0 ? children : undefined,
+  };
+}
+
+/**
+ * Given a `VirtualDOM` specification, recursively constructs a DOM tree.
  *
  * This function takes a `VirtualDOM` object, which describes the desired
  * element (including its tag name, attributes, event listeners, and children),
  * and creates the corresponding DOM element. If the `children` array in the
  * specification contains further `VirtualDOM` objects, `buildElement` will be
- * called recursively to construct those child elements.
+ * called recursively to construct those child elements as well.
  *
  * @example
- * const myComponent = buildElement({
+ * const element = buildElement({
  *   tagName: 'div',
  *   attributes: { id: 'my-component', class: 'container' },
  *   listeners: {
@@ -101,15 +97,15 @@ export interface VirtualDOM<E> {
  *     document.createElement('hr')
  *   ]
  * });
- * document.body.appendChild(myComponent);
+ * document.body.appendChild(element);
  */
-export function buildElement<E extends keyof HTMLElementTagNameMap>(
-  options: VirtualDOM<E>
+export function createElement<E extends keyof HTMLElementTagNameMap>(
+  virtual: VirtualDOM<E>
 ): HTMLElementTagNameMap[E];
-export function buildElement<E extends keyof SVGElementTagNameMap>(
-  options: VirtualDOM<E>
+export function createElement<E extends keyof SVGElementTagNameMap>(
+  virtual: VirtualDOM<E>
 ): SVGElementTagNameMap[E];
-export function buildElement<E extends Element = Element>({
+export function createElement<E extends Element = Element>({
   tagName,
   namespaceURI,
   attributes,
@@ -140,7 +136,7 @@ export function buildElement<E extends Element = Element>({
       if (child instanceof Node) {
         element.appendChild(child);
       } else if (typeof child === "object") {
-        element.appendChild(buildElement(child));
+        element.appendChild(createElement(child));
       } else {
         element.appendChild(document.createTextNode(child.toString()));
       }
@@ -150,7 +146,8 @@ export function buildElement<E extends Element = Element>({
 }
 
 /**
- * Recursively updates an existing DOM element to match a new `VirtualDOM` specification.
+ * Given an existing DOM Element and a `VirtualDOM` specification, recursively
+ * updates the element to match the specification.
  *
  * This function efficiently modifies the provided `element` in place to reflect
  * the state described by the `options` (a `VirtualDOM` object). It updates
@@ -302,8 +299,8 @@ function updateChildren(parent: Element, children: Children = []) {
         newNodes.push(element);
         continue;
       }
-      // No match found, build element.
-      newNodes.push(buildElement(child));
+      // No match found, build new element.
+      newNodes.push(createElement(child));
     } else {
       // Try reusing the text elements.
       const text = child.toString();

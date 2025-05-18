@@ -1,8 +1,23 @@
 import { describe, expect, test } from "vitest";
-import { createVirtual, createElement } from "./dom";
+import {
+  createVirtual,
+  createElement,
+  updateElement,
+  REGISTERED_LISTENERS,
+} from "./dom";
 
 const handler1 = () => 1;
 const handler2 = () => 2;
+
+function parseHtml(input: string): Element {
+  const template = document.createElement("template");
+  template.innerHTML = input.trim();
+  return template.content.firstChild as Element;
+}
+
+function registeredListeners(element: Element) {
+  return (element as any)[REGISTERED_LISTENERS];
+}
 
 describe("createVirtual", () => {
   test("as simple as it gets", () => {
@@ -120,6 +135,9 @@ describe("createElement", () => {
       listeners: { click: handler1 },
     });
     expect(element.outerHTML).toEqual("<p></p>");
+    expect(registeredListeners(element)).toEqual({
+      click: handler1,
+    });
   });
   test("with a multiple listeners", () => {
     const element = createElement({
@@ -127,6 +145,10 @@ describe("createElement", () => {
       listeners: { mouseenter: handler1, mouseleave: handler2 },
     });
     expect(element.outerHTML).toEqual("<p></p>");
+    expect(registeredListeners(element)).toEqual({
+      mouseenter: handler1,
+      mouseleave: handler2,
+    });
   });
   test("with a single text child", () => {
     const element = createElement({
@@ -150,6 +172,9 @@ describe("createElement", () => {
       children: ["bar"],
     });
     expect(element.outerHTML).toEqual('<div id="foo">bar</div>');
+    expect(registeredListeners(element)).toEqual({
+      click: handler1,
+    });
   });
   test("with nested elements", () => {
     const element = createElement({
@@ -168,6 +193,109 @@ describe("createElement", () => {
     });
     expect(element.outerHTML).toEqual(
       '<div id="head"><h1>Title</h1><p>Content</p></div>'
+    );
+  });
+});
+
+describe("updateElement", () => {
+  test("add attribute", () => {
+    const html = parseHtml("<div></div>") as HTMLDivElement;
+    const target = createVirtual("div", { class: "foo" });
+    updateElement(html, target);
+    expect(html.outerHTML).toEqual('<div class="foo"></div>');
+  });
+  test("remove attribute", () => {
+    const html = parseHtml('<div class="foo"></div>') as HTMLDivElement;
+    const target = createVirtual("div");
+    updateElement(html, target);
+    expect(html.outerHTML).toEqual("<div></div>");
+  });
+  test("change attribute", () => {
+    const html = parseHtml('<div class="foo"></div>') as HTMLDivElement;
+    const target = createVirtual("div", { class: "bar" });
+    updateElement(html, target);
+    expect(html.outerHTML).toEqual('<div class="bar"></div>');
+  });
+  test("add / remove listener", () => {
+    const html = parseHtml("<div></div>") as HTMLDivElement;
+    updateElement(html, createVirtual("div", { onClick: handler1 }));
+    expect(registeredListeners(html)).toEqual({
+      click: handler1,
+    });
+    updateElement(html, createVirtual("div"));
+    expect(registeredListeners(html)).toEqual({});
+  });
+  test("change listener", () => {
+    const html = parseHtml("<div></div>") as HTMLDivElement;
+    updateElement(html, createVirtual("div", { onClick: handler1 }));
+    expect(registeredListeners(html)).toEqual({
+      click: handler1,
+    });
+    updateElement(html, createVirtual("div", { onClick: handler2 }));
+    expect(registeredListeners(html)).toEqual({
+      click: handler2,
+    });
+  });
+  test("add text child", () => {
+    const html = parseHtml("<div></div>") as HTMLDivElement;
+    const target = createVirtual("div", {}, "Hello");
+    updateElement(html, target);
+    expect(html.outerHTML).toEqual("<div>Hello</div>");
+  });
+  test("remove text child", () => {
+    const html = parseHtml("<div>Hello</div>") as HTMLDivElement;
+    const target = createVirtual("div");
+    updateElement(html, target);
+    expect(html.outerHTML).toEqual("<div></div>");
+  });
+  test("change text child", () => {
+    const html = parseHtml("<div>Hello</div>") as HTMLDivElement;
+    const target = createVirtual("div", {}, "World");
+    updateElement(html, target);
+    expect(html.outerHTML).toEqual("<div>World</div>");
+  });
+  test("add node child", () => {
+    const html = parseHtml("<div></div>") as HTMLDivElement;
+    const target = createVirtual("div", {}, createVirtual("span"));
+    updateElement(html, target);
+    expect(html.outerHTML).toEqual("<div><span></span></div>");
+  });
+  test("remove node child", () => {
+    const html = parseHtml("<div><span></span></div>") as HTMLDivElement;
+    const target = createVirtual("div");
+    updateElement(html, target);
+    expect(html.outerHTML).toEqual("<div></div>");
+  });
+  test("change node child", () => {
+    const html = parseHtml("<div><span></span></div>") as HTMLDivElement;
+    const target = createVirtual("div", {}, createVirtual("h1"));
+    updateElement(html, target);
+    expect(html.outerHTML).toEqual("<div><h1></h1></div>");
+  });
+  test("change order", () => {
+    const html = parseHtml("<div><h1></h1><h2></h2></div>") as HTMLDivElement;
+    const target = createVirtual(
+      "div",
+      {},
+      createVirtual("h2"),
+      createVirtual("h1")
+    );
+    updateElement(html, target);
+    expect(html.outerHTML).toEqual("<div><h2></h2><h1></h1></div>");
+  });
+  test("change keyed", () => {
+    const html = parseHtml(
+      '<div><span key="1"></span><span key="2"></span></div>'
+    ) as HTMLDivElement;
+    const target = createVirtual(
+      "div",
+      {},
+      createVirtual("span", { key: "2" }),
+      createVirtual("span", { key: "3" })
+    );
+    updateElement(html, target);
+    expect(html.outerHTML).toEqual(
+      '<div><span key="2"></span><span key="3"></span></div>'
     );
   });
 });

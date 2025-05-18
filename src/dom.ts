@@ -1,5 +1,5 @@
-const KEY_ATTRIBUTE = "key";
-const REGISTERED_LISTENERS = Symbol("__registered_listeners");
+export const KEY_ATTRIBUTE = "key";
+export const REGISTERED_LISTENERS = Symbol("__registered_listeners");
 
 // DOM Extensions.
 declare global {
@@ -47,11 +47,11 @@ export function createVirtual<E extends keyof SVGElementTagNameMap>(
   props?: VirtualProps,
   ...children: VirtualChild[]
 ): VirtualDOM<E>;
-export function createVirtual(
-  tagName: string,
+export function createVirtual<E extends string = string>(
+  tagName: E,
   props?: VirtualProps,
   ...children: VirtualChild[]
-): VirtualDOM<string> {
+): VirtualDOM<E> {
   // Prepare the function arguments.
   let attributes: Attributes | undefined;
   let listeners: Listeners | undefined;
@@ -133,16 +133,14 @@ export function createElement<E extends Element = Element>({
   // Add child nodes.
   if (children) {
     for (const child of children) {
-      if (child instanceof Node) {
-        element.appendChild(child);
-      } else if (typeof child === "object") {
+      if (typeof child === "object") {
         element.appendChild(createElement(child));
       } else {
         element.appendChild(document.createTextNode(child.toString()));
       }
     }
   }
-  return element as Element as E;
+  return element as E;
 }
 
 /**
@@ -192,17 +190,8 @@ export function updateElement<E extends keyof SVGElementTagNameMap>(
 ): SVGElementTagNameMap[E];
 export function updateElement<E extends Element = Element>(
   element: E,
-  { tagName, attributes, listeners, children }: VirtualDOM<string>
+  { attributes, listeners, children }: Omit<VirtualDOM<string>, "tagName">
 ): E {
-  if (element.nodeType !== Node.ELEMENT_NODE) {
-    throw Error(
-      `Expected element with type ${Node.ELEMENT_NODE}, but got ${element.nodeType}.`
-    );
-  } else if (element.tagName.toLowerCase() !== tagName.toLowerCase()) {
-    throw Error(
-      `Expected element with tag name "${tagName}", but got "${element.tagName}".`
-    );
-  }
   updateAttributes(element, attributes);
   updateListeners(element, listeners);
   updateChildren(element, children);
@@ -270,9 +259,7 @@ function updateChildren(parent: Element, children: Children = []) {
   // Build the list of new children.
   const newNodes: Node[] = [];
   for (const child of children) {
-    if (child instanceof Node) {
-      newNodes.push(child);
-    } else if (typeof child === "object") {
+    if (typeof child === "object") {
       // Handle keyed elements.
       const key = child.attributes?.[KEY_ATTRIBUTE];
       if (key) {

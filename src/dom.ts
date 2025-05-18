@@ -1,7 +1,6 @@
-const KEY_ATTRIBUTE = 'key';
+const KEY_ATTRIBUTE = "key";
 
-
-const REGISTERED_LISTENERS = Symbol('__registered_listeners');
+const REGISTERED_LISTENERS = Symbol("__registered_listeners");
 declare global {
   interface EventTarget {
     [REGISTERED_LISTENERS]?: Listeners;
@@ -12,21 +11,36 @@ declare global {
 }
 
 // Types used for the [createElement] function.
-type CreateElementProps = Record<string, string | EventListenerOrEventListenerObject>;
+type CreateElementProps = Record<
+  string,
+  string | EventListenerOrEventListenerObject
+>;
 type CreateElementChild = string | Node;
 
 /**
  * Creates a new HTML element with the specified tag name, properties, and child nodes.
  */
-export function createElement<E extends keyof HTMLElementTagNameMap>(tagName: E, propsOrChild?: CreateElementProps | CreateElementChild, ...childArgs: CreateElementChild[]): HTMLElementTagNameMap[E];
-export function createElement<E extends keyof SVGElementTagNameMap>(tagName: E, propsOrChild?: CreateElementProps | CreateElementChild, ...childArgs: CreateElementChild[]): SVGElementTagNameMap[E];
-export function createElement<E extends Element = Element>(tagName: string, propsOrChild?: CreateElementProps | CreateElementChild, ...childArgs: CreateElementChild[]): E {
+export function createElement<E extends keyof HTMLElementTagNameMap>(
+  tagName: E,
+  propsOrChild?: CreateElementProps | CreateElementChild,
+  ...childArgs: CreateElementChild[]
+): HTMLElementTagNameMap[E];
+export function createElement<E extends keyof SVGElementTagNameMap>(
+  tagName: E,
+  propsOrChild?: CreateElementProps | CreateElementChild,
+  ...childArgs: CreateElementChild[]
+): SVGElementTagNameMap[E];
+export function createElement<E extends Element = Element>(
+  tagName: string,
+  propsOrChild?: CreateElementProps | CreateElementChild,
+  ...childArgs: CreateElementChild[]
+): E {
   // Prepare the function arguments.
   let props: CreateElementProps;
   const attributes: Attributes = {};
   const listeners: Listeners = {};
   const children: Array<string | Node> = [];
-  if (typeof propsOrChild === 'string' || propsOrChild instanceof Node) {
+  if (typeof propsOrChild === "string" || propsOrChild instanceof Node) {
     children.push(propsOrChild);
     props = {};
   } else {
@@ -36,9 +50,9 @@ export function createElement<E extends Element = Element>(tagName: string, prop
   // Create the attributes and listeners.
   for (const name of Object.getOwnPropertyNames(props)) {
     const value = props[name];
-    if (name.startsWith('on') && typeof value === 'function') {
+    if (name.startsWith("on") && typeof value === "function") {
       listeners[name.slice(2).toLowerCase()] = value;
-    } else if (typeof value === 'string') {
+    } else if (typeof value === "string") {
       attributes[name] = value;
     }
   }
@@ -51,7 +65,6 @@ export function createElement<E extends Element = Element>(tagName: string, prop
   } as VirtualDOM<any>);
 }
 
-
 // Types used for the virtual DOM specification.
 type Attributes = Record<string, string>;
 type Listeners = Record<string, EventListenerOrEventListenerObject>;
@@ -59,11 +72,11 @@ type Children = Array<string | Node | VirtualDOM<any>>;
 
 // Virtual DOM specification.
 export interface VirtualDOM<E> {
-  tagName: E,
-  namespaceURI?: string,
-  attributes?: Attributes,
-  listeners?: Listeners,
-  children?: Children,
+  tagName: E;
+  namespaceURI?: string;
+  attributes?: Attributes;
+  listeners?: Listeners;
+  children?: Children;
 }
 
 /**
@@ -90,9 +103,19 @@ export interface VirtualDOM<E> {
  * });
  * document.body.appendChild(myComponent);
  */
-export function buildElement<E extends keyof HTMLElementTagNameMap>(options: VirtualDOM<E>): HTMLElementTagNameMap[E];
-export function buildElement<E extends keyof SVGElementTagNameMap>(options: VirtualDOM<E>): SVGElementTagNameMap[E];
-export function buildElement<E extends Element = Element>({ tagName, namespaceURI, attributes, listeners, children }: VirtualDOM<string>): E {
+export function buildElement<E extends keyof HTMLElementTagNameMap>(
+  options: VirtualDOM<E>
+): HTMLElementTagNameMap[E];
+export function buildElement<E extends keyof SVGElementTagNameMap>(
+  options: VirtualDOM<E>
+): SVGElementTagNameMap[E];
+export function buildElement<E extends Element = Element>({
+  tagName,
+  namespaceURI,
+  attributes,
+  listeners,
+  children,
+}: VirtualDOM<string>): E {
   const element = namespaceURI
     ? document.createElementNS(namespaceURI, tagName)
     : document.createElement(tagName);
@@ -115,8 +138,8 @@ export function buildElement<E extends Element = Element>({ tagName, namespaceUR
   if (children) {
     for (const child of children) {
       if (child instanceof Node) {
-        element.appendChild(child)
-      } else if (typeof child === 'object') {
+        element.appendChild(child);
+      } else if (typeof child === "object") {
         element.appendChild(buildElement(child));
       } else {
         element.appendChild(document.createTextNode(child.toString()));
@@ -162,13 +185,26 @@ export function buildElement<E extends Element = Element>({ tagName, namespaceUR
  *
  * update();
  */
-export function updateElement<E extends keyof HTMLElementTagNameMap>(element: HTMLElementTagNameMap[E], options: VirtualDOM<E>): HTMLElementTagNameMap[E];
-export function updateElement<E extends keyof SVGElementTagNameMap>(element: SVGElementTagNameMap[E], options: VirtualDOM<E>): SVGElementTagNameMap[E];
-export function updateElement<E extends Element = Element>(element: E, { tagName, attributes, listeners, children }: VirtualDOM<string>): E {
+export function updateElement<E extends keyof HTMLElementTagNameMap>(
+  element: HTMLElementTagNameMap[E],
+  options: VirtualDOM<E>
+): HTMLElementTagNameMap[E];
+export function updateElement<E extends keyof SVGElementTagNameMap>(
+  element: SVGElementTagNameMap[E],
+  options: VirtualDOM<E>
+): SVGElementTagNameMap[E];
+export function updateElement<E extends Element = Element>(
+  element: E,
+  { tagName, attributes, listeners, children }: VirtualDOM<string>
+): E {
   if (element.nodeType !== Node.ELEMENT_NODE) {
-    throw Error(`Expected element with type ${Node.ELEMENT_NODE}, but got ${element.nodeType}.`);
+    throw Error(
+      `Expected element with type ${Node.ELEMENT_NODE}, but got ${element.nodeType}.`
+    );
   } else if (element.tagName.toLowerCase() !== tagName.toLowerCase()) {
-    throw Error(`Expected element with tag name "${tagName}", but got "${element.tagName}".`);
+    throw Error(
+      `Expected element with tag name "${tagName}", but got "${element.tagName}".`
+    );
   }
   updateAttributes(element, attributes);
   updateListeners(element, listeners);
@@ -196,7 +232,7 @@ function updateAttributes(element: Element, attributes: Attributes = {}) {
 
 /** Internal helper to in-place update the event listeners. */
 function updateListeners(element: Element, listeners: Listeners = {}) {
-  const registeredListeners = element[REGISTERED_LISTENERS] ??= {};
+  const registeredListeners = (element[REGISTERED_LISTENERS] ??= {});
   for (const name of Object.getOwnPropertyNames(registeredListeners)) {
     if (registeredListeners[name] !== listeners[name]) {
       element.removeEventListener(name, registeredListeners[name]);
@@ -216,7 +252,7 @@ function updateChildren(parent: Element, children: Children = []) {
   const oldNodes = [...parent.childNodes];
 
   // Index the old children.
-  const keyedElements = new Map<string, Element>()
+  const keyedElements = new Map<string, Element>();
   const otherElements: Element[] = [];
   const textNodes = new Map<string, Text>();
   for (const node of oldNodes) {
@@ -241,12 +277,15 @@ function updateChildren(parent: Element, children: Children = []) {
   for (const child of children) {
     if (child instanceof Node) {
       newNodes.push(child);
-    } else if (typeof child === 'object') {
+    } else if (typeof child === "object") {
       // Handle keyed elements.
       const key = child.attributes?.[KEY_ATTRIBUTE];
       if (key) {
         const element = keyedElements.get(key);
-        if (element && element.tagName.toLowerCase() === child.tagName.toLowerCase()) {
+        if (
+          element &&
+          element.tagName.toLowerCase() === child.tagName.toLowerCase()
+        ) {
           updateElement(element, child);
           keyedElements.delete(key);
           newNodes.push(element);
@@ -254,8 +293,10 @@ function updateChildren(parent: Element, children: Children = []) {
         }
       }
       // Handle other elements.
-      const index = otherElements
-        .findIndex((element) => element.tagName.toLowerCase() == child.tagName.toLowerCase());
+      const index = otherElements.findIndex(
+        (element) =>
+          element.tagName.toLowerCase() == child.tagName.toLowerCase()
+      );
       if (index >= 0) {
         const element = otherElements[index];
         updateElement(element, child);
@@ -280,7 +321,11 @@ function updateChildren(parent: Element, children: Children = []) {
   }
 
   // Remove elements no longer present.
-  for (const element of [...keyedElements.values(), ...otherElements, ...textNodes.values()]) {
+  for (const element of [
+    ...keyedElements.values(),
+    ...otherElements,
+    ...textNodes.values(),
+  ]) {
     parent.removeChild(element);
   }
 

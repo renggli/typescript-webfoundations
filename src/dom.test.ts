@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { createElement } from "./dom.ts";
+import { createElement } from "./dom";
 
 describe("createElement", () => {
   test("as simple as it gets", () => {

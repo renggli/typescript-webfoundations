@@ -249,13 +249,11 @@ function updateListeners(element: Element, listeners: Listeners = {}) {
 
 /** Internal helper to in-place update the children. */
 function updateChildren(parent: Element, children: Children = []) {
-  const oldNodes = [...parent.childNodes];
-
   // Index the old children.
   const keyedElements = new Map<string, Element>();
   const otherElements: Element[] = [];
   const textNodes = new Map<string, Text>();
-  for (const node of oldNodes) {
+  for (const node of [...parent.childNodes]) {
     if (node.nodeType === Node.ELEMENT_NODE) {
       const element = node as Element;
       const key = element.getAttribute(KEY_ATTRIBUTE);
@@ -329,7 +327,7 @@ function updateChildren(parent: Element, children: Children = []) {
     parent.removeChild(element);
   }
 
-  // Append and move into the right order.
+  // Insert new nodes and move old ones to the right place.
   for (let i = newNodes.length - 1; i >= 0; i--) {
     const node = newNodes[i];
     const nextSibling = newNodes[i + 1] ?? null;

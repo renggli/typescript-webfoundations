@@ -1,6 +1,6 @@
 __screenshots__/
 node_modules/
-build/
+dist/
 
 package-lock.json
 *.js.map

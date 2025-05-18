@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" href="../reset.css" />
+    <title>Web Foundation: Carousel Demo</title>
+    <script type="module">
+      import { registerCarouselComponent } from "./carousel.js";
+      import { registerTileComponent } from "./tile.js";
+
+      document.addEventListener("DOMContentLoaded", () => {
+        registerCarouselComponent();
+        registerTileComponent();
+      });
+    </script>
+  </head>
+
+  <body>
+    <h1>Carousel</h1>
+    <wf-carousel>
+      <wf-tile
+        width="180px"
+        height="300px"
+        background="https://picsum.photos/300?random=01"
+      ></wf-tile>
+      <wf-tile
+        width="180px"
+        height="300px"
+        background="https://picsum.photos/300?random=02"
+      ></wf-tile>
+      <wf-tile
+        width="180px"
+        height="300px"
+        background="https://picsum.photos/300?random=03"
+      ></wf-tile>
+      <wf-tile
+        width="180px"
+        height="300px"
+        background="https://picsum.photos/300?random=04"
+      ></wf-tile>
+      <wf-tile
+        width="180px"
+        height="300px"
+        background="https://picsum.photos/300?random=05"
+      ></wf-tile>
+      <wf-tile
+        width="180px"
+        height="300px"
+        background="https://picsum.photos/300?random=06"
+      ></wf-tile>
+      <wf-tile
+        width="180px"
+        height="300px"
+        background="https://picsum.photos/300?random=07"
+      ></wf-tile>
+      <wf-tile
+        width="180px"
+        height="300px"
+        background="https://picsum.photos/300?random=08"
+      ></wf-tile>
+      <wf-tile
+        width="180px"
+        height="300px"
+        background="https://picsum.photos/300?random=09"
+      ></wf-tile>
+      <wf-tile
+        width="180px"
+        height="300px"
+        background="https://picsum.photos/300?random=10"
+      ></wf-tile>
+    </wf-carousel>
+  </body>
+</html>

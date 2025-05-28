@@ -198,7 +198,8 @@ export function updateElement<E extends Element = Element>(
   return element;
 }
 
-/** Internal helper to in-place update the attributes. */
+
+// Internal helper to in-place update attributes.
 function updateAttributes(element: Element, attributes: Attributes = {}) {
   const namesToRemove = [];
   for (const name of element.getAttributeNames()) {
@@ -216,7 +217,8 @@ function updateAttributes(element: Element, attributes: Attributes = {}) {
   }
 }
 
-/** Internal helper to in-place update the event listeners. */
+
+// Internal helper to in-place update event listeners.
 function updateListeners(element: Element, listeners: Listeners = {}) {
   const registeredListeners = (element[REGISTERED_LISTENERS] ??= {});
   for (const name of Object.getOwnPropertyNames(registeredListeners)) {
@@ -233,84 +235,55 @@ function updateListeners(element: Element, listeners: Listeners = {}) {
   }
 }
 
-/** Internal helper to in-place update the children. */
+
+// Internal helper to in-place update the children.
 function updateChildren(parent: Element, children: Children = []) {
   // Index the old children.
-  const keyedElements = new Map<string, Element>();
-  const otherElements: Element[] = [];
-  const textNodes = new Map<string, Text>();
+  const elements = new Map<string, Element[]>();
+  const texts = new Map<string, Text>();
   for (const node of [...parent.childNodes]) {
-    if (node.nodeType === Node.ELEMENT_NODE) {
-      const element = node as Element;
-      const key = element.getAttribute(KEY_ATTRIBUTE);
-      if (key) {
-        keyedElements.set(key, element);
-      } else {
-        otherElements.push(element);
+    if (node instanceof Element) {
+      let key = node.tagName.toLowerCase();
+      if (node.hasAttribute(KEY_ATTRIBUTE)) {
+        key += `|${node.getAttribute(KEY_ATTRIBUTE)}`;
       }
-    } else if (node.nodeType === Node.TEXT_NODE) {
-      const text = node as Text;
-      if (text.textContent) {
-        textNodes.set(text.textContent, text);
-      }
+      getMapList(elements, key).push(node);
+    } else if (node instanceof Text) {
+      texts.set(node.textContent ?? '', node);
     }
   }
-
   // Build the list of new children.
   const newNodes: Node[] = [];
   for (const child of children) {
     if (typeof child === "object") {
-      // Handle keyed elements.
-      const key = child.attributes?.[KEY_ATTRIBUTE];
-      if (key) {
-        const element = keyedElements.get(key);
-        if (
-          element &&
-          element.tagName.toLowerCase() === child.tagName.toLowerCase()
-        ) {
-          updateElement(element, child);
-          keyedElements.delete(key);
-          newNodes.push(element);
-          continue;
-        }
+      let key = child.tagName.toLowerCase();
+      if (child.attributes?.[KEY_ATTRIBUTE]) {
+        key += `|${child.attributes[KEY_ATTRIBUTE]}`;
       }
-      // Handle other elements.
-      const index = otherElements.findIndex(
-        (element) =>
-          element.tagName.toLowerCase() == child.tagName.toLowerCase()
-      );
-      if (index >= 0) {
-        const element = otherElements[index];
-        updateElement(element, child);
-        otherElements.splice(index, 1);
-        newNodes.push(element);
-        continue;
-      }
-      // No match found, build new element.
-      newNodes.push(createElement(child));
+      const element = getMapList(elements, key).shift()
+        ?? createElement(child);
+      newNodes.push(element);
     } else {
       // Try reusing the text elements.
       const text = child.toString();
-      const textNode = textNodes.get(text);
-      if (textNode) {
-        newNodes.push(textNode);
-        textNodes.delete(text);
-        continue;
+      const node = texts.get(text);
+      if (node) {
+        newNodes.push(node);
+        texts.delete(text);
+      } else {
+        newNodes.push(document.createTextNode(text));
       }
-      // No match found, create node.
-      newNodes.push(document.createTextNode(text));
     }
   }
-
   // Remove elements no longer present.
-  for (const element of [
-    ...keyedElements.values(),
-    ...otherElements,
-    ...textNodes.values(),
-  ]) {
-    parent.removeChild(element);
+  for (const elementList of elements.values()) {
+    for (const element of elementList) {
+      parent.removeChild(element);
+    }
   }
-
+  for (const text of texts.values()) {
+    parent.removeChild(text);
+  }
   // Insert new nodes and move old ones to the right place.
   for (let i = newNodes.length - 1; i >= 0; i--) {
     const node = newNodes[i];
@@ -327,4 +300,13 @@ function updateChildren(parent: Element, children: Children = []) {
       parent.insertBefore(node, nextSibling);
     }
   }
+}
+
+// Returns and possibly creates a new list entry in a map.
+function getMapList<K, V>(map: Map<K, V[]>, key: K): V[] {
+  const values = map.get(key);
+  if (values) return values;
+  const result: V[] = [];
+  map.set(key, result);
+  return result;
 }

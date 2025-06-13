@@ -13,7 +13,8 @@ declare global {
 
 // Types used for the virtual DOM specification.
 type Attributes = Record<string, string>;
-type Listeners = Record<string, EventListenerOrEventListenerObject>;
+type Listener = { listener: EventListenerOrEventListenerObject, options?: AddEventListenerOptions }
+type Listeners = Record<string, Listener>;
 type Children = Array<string | VirtualDOM<any>>;
 
 /** Specification of a DOM node. */
@@ -31,7 +32,7 @@ export interface VirtualDOM<E> {
 }
 
 // Types used for the [createVirtual] function.
-type VirtualProps = Record<string, string | EventListenerOrEventListenerObject>;
+type VirtualProps = Record<string, string | EventListenerOrEventListenerObject | Listener>;
 type VirtualChild = string | VirtualDOM<any>;
 
 /**
@@ -57,12 +58,21 @@ export function createVirtual<E extends string = string>(
   let listeners: Listeners | undefined;
   // Create the attributes and listeners.
   if (props) {
-    for (const name of Object.getOwnPropertyNames(props)) {
-      const value = props[name];
-      if (name.startsWith("on") && typeof value === "function") {
-        (listeners ??= {})[name.slice(2).toLowerCase()] = value;
-      } else if (typeof value === "string") {
-        (attributes ??= {})[name] = value;
+    for (const [name, value] of Object.entries(props)) {
+      if (name.startsWith("on")) {
+        let listener: Listener | undefined;
+        if (typeof value === 'function' || (typeof value === 'object' && 'handleEvent' in value)) {
+          listener = { listener: value };
+        } else if (typeof value === 'object' && 'listener' in value) {
+          listener = value;
+        }
+        if (listener) {
+          (listeners ??= {})[name.slice(2).toLowerCase()] = listener;
+          continue;
+        }
+      }
+      if (value) {
+        (attributes ??= {})[name] = value.toString();
       }
     }
   }
@@ -117,17 +127,16 @@ export function createElement<E extends Element = Element>({
     : document.createElement(tagName);
   // Set attributes.
   if (attributes) {
-    for (const name of Object.getOwnPropertyNames(attributes)) {
-      element.setAttribute(name, attributes[name]);
+    for (const [name, value] of Object.entries(attributes)) {
+      element.setAttribute(name, value);
     }
   }
   // Add event listeners.
   if (listeners) {
-    for (const name of Object.getOwnPropertyNames(listeners)) {
-      const listener = listeners[name];
-      element.addEventListener(name, listener);
+    for (const [name, value] of Object.entries(listeners)) {
+      element.addEventListener(name, value.listener, value.options);
       const registeredListeners = (element[REGISTERED_LISTENERS] ??= {});
-      registeredListeners[name] = listener;
+      registeredListeners[name] = value;
     }
   }
   // Add child nodes.
@@ -207,9 +216,9 @@ function updateAttributes(element: Element, attributes: Attributes = {}) {
       namesToRemove.push(name);
     }
   }
-  for (const name of Object.getOwnPropertyNames(attributes)) {
-    if (element.getAttribute(name) !== attributes[name]) {
-      element.setAttribute(name, attributes[name]);
+  for (const [name, value] of Object.entries(attributes)) {
+    if (element.getAttribute(name) !== value) {
+      element.setAttribute(name, value);
     }
   }
   for (const name of namesToRemove) {
@@ -221,16 +230,16 @@ function updateAttributes(element: Element, attributes: Attributes = {}) {
 // Internal helper to in-place update event listeners.
 function updateListeners(element: Element, listeners: Listeners = {}) {
   const registeredListeners = (element[REGISTERED_LISTENERS] ??= {});
-  for (const name of Object.getOwnPropertyNames(registeredListeners)) {
-    if (registeredListeners[name] !== listeners[name]) {
-      element.removeEventListener(name, registeredListeners[name]);
+  for (const [name, value] of Object.entries(registeredListeners)) {
+    if (listeners[name]?.listener !== value.listener) {
+      element.removeEventListener(name, value.listener, value.options);
       delete registeredListeners[name];
     }
   }
-  for (const name of Object.getOwnPropertyNames(listeners)) {
-    if (registeredListeners[name] !== listeners[name]) {
-      element.addEventListener(name, listeners[name]);
-      registeredListeners[name] = listeners[name];
+  for (const [name, value] of Object.entries(listeners)) {
+    if (registeredListeners[name]?.listener !== value.listener) {
+      element.addEventListener(name, value.listener, value.options);
+      registeredListeners[name] = value;
     }
   }
 }

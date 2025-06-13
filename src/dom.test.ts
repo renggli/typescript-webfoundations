@@ -6,8 +6,11 @@ import {
   REGISTERED_LISTENERS,
 } from "./dom";
 
-const handler1 = () => 1;
-const handler2 = () => 2;
+const handler1: EventListener = () => 1;
+const handler2: EventListener = (event: Event) => 2;
+const handlerObject: EventListenerObject = {
+  handleEvent: (event: Event) => 3,
+};
 
 function parseHtml(input: string): Element {
   const template = document.createElement("template");
@@ -40,21 +43,59 @@ describe("createVirtual", () => {
       attributes: { class: "foo", id: "bar" },
     });
   });
-  test("with a single listeners", () => {
+  test("with a single function listener", () => {
     const virtual = createVirtual("p", { onClick: handler1 });
     expect(virtual).toEqual({
       tagName: "p",
-      listeners: { click: handler1 },
+      listeners: {
+        click: { listener: handler1 },
+      },
     });
   });
-  test("with a multiple listeners", () => {
+  test("with a single function listener and options", () => {
+    const listener = { listener: handler1, options: { passive: true } };
+    const virtual = createVirtual("p", { onClick: listener });
+    expect(virtual).toEqual({
+      tagName: "p",
+      listeners: {
+        click: listener,
+      },
+    });
+  });
+  test("with a multiple function listeners", () => {
     const virtual = createVirtual("p", {
       onMouseEnter: handler1,
       onMouseLeave: handler2,
     });
     expect(virtual).toEqual({
       tagName: "p",
-      listeners: { mouseenter: handler1, mouseleave: handler2 },
+      listeners: {
+        mouseenter: { listener: handler1 },
+        mouseleave: { listener: handler2 },
+      },
+    });
+  });
+  test("with a handler object", () => {
+    const virtual = createVirtual('p', {
+      onClick: handlerObject,
+    });
+    expect(virtual).toEqual({
+      tagName: "p",
+      listeners: {
+        click: { listener: handlerObject },
+      }
+    });
+  });
+  test("with a handler object and options", () => {
+    const listener = { listener: handlerObject, options: { capture: true } };
+    const virtual = createVirtual('p', {
+      onClick: listener,
+    });
+    expect(virtual).toEqual({
+      tagName: "p",
+      listeners: {
+        click: listener,
+      }
     });
   });
   test("with a single text child", () => {
@@ -80,7 +121,9 @@ describe("createVirtual", () => {
     expect(virtual).toEqual({
       tagName: "div",
       attributes: { id: "foo" },
-      listeners: { click: handler1 },
+      listeners: {
+        click: { listener: handler1 }
+      },
       children: ["bar"],
     });
   });
@@ -129,25 +172,68 @@ describe("createElement", () => {
     });
     expect(element.outerHTML).toEqual('<p class="foo" id="bar"></p>');
   });
-  test("with a single listeners", () => {
+  test("with a single function listener", () => {
     const element = createElement({
       tagName: "p",
-      listeners: { click: handler1 },
+      listeners: {
+        click: { listener: handler1 }
+      },
     });
     expect(element.outerHTML).toEqual("<p></p>");
     expect(registeredListeners(element)).toEqual({
-      click: handler1,
+      click: { listener: handler1 },
     });
   });
-  test("with a multiple listeners", () => {
+  test("with a single function listener and options", () => {
+    const listener = { listener: handler1, options: { passive: true } };
     const element = createElement({
       tagName: "p",
-      listeners: { mouseenter: handler1, mouseleave: handler2 },
+      listeners: {
+        click: listener
+      },
     });
     expect(element.outerHTML).toEqual("<p></p>");
     expect(registeredListeners(element)).toEqual({
-      mouseenter: handler1,
-      mouseleave: handler2,
+      click: listener,
+    });
+  });
+  test("with a multiple function listeners", () => {
+    const element = createElement({
+      tagName: "p",
+      listeners: {
+        mouseenter: { listener: handler1 },
+        mouseleave: { listener: handler2 }
+      },
+    });
+    expect(element.outerHTML).toEqual("<p></p>");
+    expect(registeredListeners(element)).toEqual({
+      mouseenter: { listener: handler1 },
+      mouseleave: { listener: handler2 },
+    });
+  });
+  test("with a handler object", () => {
+    const element = createElement({
+      tagName: "p",
+      listeners: {
+        click: { listener: handlerObject },
+      }
+    });
+    expect(element.outerHTML).toEqual("<p></p>");
+    expect(registeredListeners(element)).toEqual({
+      click: { listener: handlerObject },
+    });
+  });
+  test("with a handler object and options", () => {
+    const listener = { listener: handlerObject, options: { capture: true } };
+    const element = createElement({
+      tagName: "p",
+      listeners: {
+        click: listener,
+      }
+    });
+    expect(element.outerHTML).toEqual("<p></p>");
+    expect(registeredListeners(element)).toEqual({
+      click: listener,
     });
   });
   test("with a single text child", () => {
@@ -168,12 +254,12 @@ describe("createElement", () => {
     const element = createElement({
       tagName: "div",
       attributes: { id: "foo" },
-      listeners: { click: handler1 },
+      listeners: { click: { listener: handler1 } },
       children: ["bar"],
     });
     expect(element.outerHTML).toEqual('<div id="foo">bar</div>');
     expect(registeredListeners(element)).toEqual({
-      click: handler1,
+      click: { listener: handler1 },
     });
   });
   test("with nested elements", () => {
@@ -220,7 +306,7 @@ describe("updateElement", () => {
     const html = parseHtml("<div></div>") as HTMLDivElement;
     updateElement(html, createVirtual("div", { onClick: handler1 }));
     expect(registeredListeners(html)).toEqual({
-      click: handler1,
+      click: { listener: handler1 },
     });
     updateElement(html, createVirtual("div"));
     expect(registeredListeners(html)).toEqual({});
@@ -229,11 +315,30 @@ describe("updateElement", () => {
     const html = parseHtml("<div></div>") as HTMLDivElement;
     updateElement(html, createVirtual("div", { onClick: handler1 }));
     expect(registeredListeners(html)).toEqual({
-      click: handler1,
+      click: { listener: handler1 },
     });
     updateElement(html, createVirtual("div", { onClick: handler2 }));
     expect(registeredListeners(html)).toEqual({
-      click: handler2,
+      click: { listener: handler2 },
+    });
+    updateElement(html, createVirtual("div", { onClick: handlerObject }));
+    expect(registeredListeners(html)).toEqual({
+      click: { listener: handlerObject },
+    });
+  });
+  test("change listener with options", () => {
+    const html = parseHtml("<div></div>") as HTMLDivElement;
+    updateElement(html, createVirtual("div", { onClick: { listener: handler1, options: { capture: true } } }));
+    expect(registeredListeners(html)).toEqual({
+      click: { listener: handler1, options: { capture: true } },
+    });
+    updateElement(html, createVirtual("div", { onClick: { listener: handler2, options: { passive: true } } }));
+    expect(registeredListeners(html)).toEqual({
+      click: { listener: handler2, options: { passive: true } },
+    });
+    updateElement(html, createVirtual("div", { onClick: { listener: handlerObject, options: { once: true } } }));
+    expect(registeredListeners(html)).toEqual({
+      click: { listener: handlerObject, options: { once: true } },
     });
   });
   test("add text child", () => {
